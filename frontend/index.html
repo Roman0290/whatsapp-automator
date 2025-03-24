@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Automator</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #075e54; 
+        }
+        button {
+            background-color: #075e54;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #054f48;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap; 
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="file"] { 
+            width: calc(100% - 12px);
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WhatsApp Automator</h1>
+
+        <div class="input-group">
+            <label for="prefix">Phone Prefix:</label>
+            <input type="text" id="prefix" value="251">
+        </div>
+
+        <div class="input-group">
+            <label for="csvFile">Contacts CSV File:</label>
+            <input type="file" id="csvFile">
+        </div>
+
+        <div class="input-group">
+            <label for="txtFile">Message TXT File:</label>
+            <input type="file" id="txtFile">
+        </div>
+
+        <button id="loginButton">Login with WhatsApp</button>
+
+        <div id="status">
+            Waiting for action...
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginButton = document.getElementById('loginButton');
+            const statusDiv = document.getElementById('status');
+            const prefixInput = document.getElementById('prefix');
+            const csvFileInput = document.getElementById('csvFile');
+            const txtFileInput = document.getElementById('txtFile');
+
+            loginButton.addEventListener('click', async () => {
+                statusDiv.textContent = 'Initiating login process...';
+
+                const prefix = prefixInput.value.trim();
+                const csvFile = csvFileInput.files[0];
+                const txtFile = txtFileInput.files[0];
+
+                if (!prefix || !csvFile || !txtFile) {
+                    statusDiv.textContent = 'Please fill in all the required fields.';
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('prefix', prefix);
+                formData.append('messageFile', txtFile); 
+                formData.append('numbersFile', csvFile); 
+
+                try {
+
+                    const response = await fetch('http://localhost:8000/login_and_send', { 
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        statusDiv.textContent = data.message;
+
+                    } else {
+                        statusDiv.textContent = `Error: ${data.error || 'Failed to initiate login.'}`;
+                    }
+                } catch (error) {
+                    statusDiv.textContent = `Error: Could not connect to the backend. ${error}`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
