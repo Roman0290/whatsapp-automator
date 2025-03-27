@@ -26,10 +26,11 @@ class Bot:
     def __init__(self):
         
         options = Options()
-        options.add_argument("--user-data-dir=D:\\c drive files\\AiQeM Files\\Whatsapp-Automator\\backend\\chrome-data")  # Path to user data for session persistence
+        options.add_argument("--user-data-dir=C:\\Users\\HP\\Desktop\\Projects\\whatsapp-automator\\backend\\chrome-data")  # Path to user data for session persistence
+        # options.add_argument("--headless=new")  # Instead of --headless
 
        
-        self.driver = webdriver.Chrome(service=ChromeService(r"D:\c drive files\AiQeM Files\Whatsapp-Automator\backend\chromedriver.exe"), options=options)
+        self.driver = webdriver.Chrome(service=ChromeService(r"C:\Users\HP\Desktop\Projects\whatsapp-automator\backend\chromedriver.exe"), options=options)
         self._message = None
         self._csv_numbers = None
         self._csv_groups = None 
