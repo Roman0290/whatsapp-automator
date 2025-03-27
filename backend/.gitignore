@@ -6,4 +6,3 @@ data/*
 /venv
 /chrome-data
 /whatsapp
-chromedriver.exe
