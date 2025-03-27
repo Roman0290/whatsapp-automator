@@ -27,7 +27,7 @@ class Bot:
         
         options = Options()
         options.add_argument("--user-data-dir=C:\\Users\\HP\\Desktop\\Projects\\whatsapp-automator\\backend\\chrome-data")  # Path to user data for session persistence
-        # options.add_argument("--headless=new")  # Instead of --headless
+        options.add_argument("--headless=new")  # Instead of --headless
 
        
         self.driver = webdriver.Chrome(service=ChromeService(r"C:\Users\HP\Desktop\Projects\whatsapp-automator\backend\chromedriver.exe"), options=options)
@@ -93,8 +93,7 @@ class Bot:
                 time.sleep(5)
 
         self._start_time = time.strftime("%d-%m-%Y_%H%M%S", time.localtime())
-        if send_to_contacts: 
-            self.send_messages_to_all_contacts()
+        
         if send_to_groups:
             self.send_messages_to_all_groups()
 
