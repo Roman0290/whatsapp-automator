@@ -16,7 +16,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
+            max-width: 500px;
             margin: 0 auto;
         }
         h1 {
@@ -53,12 +53,41 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="text"], input[type="file"] { 
+        input[type="text"], input[type="file"], select { 
             width: calc(100% - 12px);
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
+        }
+        .checkbox-group {
+            margin: 10px 0;
+        }
+        .checkbox-group label {
+            display: inline;
+            font-weight: normal;
+            margin-left: 5px;
+        }
+        .tab {
+            display: none;
+        }
+        .tab.active {
+            display: block;
+        }
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            background-color: #ddd;
+            border: none;
+            cursor: pointer;
+        }
+        .tab-button.active {
+            background-color: #075e54;
+            color: white;
         }
     </style>
 </head>
@@ -66,19 +95,64 @@
     <div class="container">
         <h1>WhatsApp Automator</h1>
 
-        <div class="input-group">
-            <label for="prefix">Phone Prefix:</label>
-            <input type="text" id="prefix" value="251">
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="openTab('contacts-tab')">Contacts</button>
+            <button class="tab-button" onclick="openTab('groups-tab')">Groups</button>
+        </div>
+
+        <div id="contacts-tab" class="tab active">
+            <div class="input-group">
+                <label for="prefix">Phone Prefix:</label>
+                <input type="text" id="prefix" value="251">
+            </div>
+
+            <div class="input-group">
+                <label for="csvFile">Contacts CSV File:</label>
+                <input type="file" id="csvFile" accept=".csv">
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="includeNames" checked>
+                <label for="includeNames">Include contact names in message</label>
+            </div>
+        </div>
+
+        <div id="groups-tab" class="tab">
+            <div class="input-group">
+                <label for="groupFile">Groups CSV File:</label>
+                <input type="file" id="groupFile" accept=".csv">
+            </div>
         </div>
 
         <div class="input-group">
-            <label for="csvFile">Contacts CSV File:</label>
-            <input type="file" id="csvFile">
+            <label for="messageType">Message Type:</label>
+            <select id="messageType">
+                <option value="text">Text Message</option>
+                <option value="media">Media with Caption</option>
+            </select>
         </div>
 
-        <div class="input-group">
+        <div class="input-group" id="textMessageGroup">
             <label for="txtFile">Message TXT File:</label>
-            <input type="file" id="txtFile">
+            <input type="file" id="txtFile" accept=".txt">
+        </div>
+
+        <div class="input-group" id="mediaGroup" style="display: none;">
+            <label for="mediaFile">Media File:</label>
+            <input type="file" id="mediaFile" accept="image/*,video/*,application/pdf">
+            
+            <label for="captionFile" style="margin-top: 10px;">Caption TXT File:</label>
+            <input type="file" id="captionFile" accept=".txt">
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="sendToContacts" checked>
+            <label for="sendToContacts">Send to Contacts</label>
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="sendToGroups">
+            <label for="sendToGroups">Send to Groups</label>
         </div>
 
         <button id="loginButton">Login with WhatsApp</button>
@@ -95,27 +169,88 @@
             const prefixInput = document.getElementById('prefix');
             const csvFileInput = document.getElementById('csvFile');
             const txtFileInput = document.getElementById('txtFile');
+            const groupFileInput = document.getElementById('groupFile');
+            const mediaFileInput = document.getElementById('mediaFile');
+            const captionFileInput = document.getElementById('captionFile');
+            const messageTypeSelect = document.getElementById('messageType');
+            const textMessageGroup = document.getElementById('textMessageGroup');
+            const mediaGroup = document.getElementById('mediaGroup');
+            const sendToContactsCheckbox = document.getElementById('sendToContacts');
+            const sendToGroupsCheckbox = document.getElementById('sendToGroups');
+            const includeNamesCheckbox = document.getElementById('includeNames');
+
+            // Show/hide message type fields
+            messageTypeSelect.addEventListener('change', () => {
+                if (messageTypeSelect.value === 'text') {
+                    textMessageGroup.style.display = 'block';
+                    mediaGroup.style.display = 'none';
+                } else {
+                    textMessageGroup.style.display = 'none';
+                    mediaGroup.style.display = 'block';
+                }
+            });
 
             loginButton.addEventListener('click', async () => {
                 statusDiv.textContent = 'Initiating login process...';
 
                 const prefix = prefixInput.value.trim();
-                const csvFile = csvFileInput.files[0];
-                const txtFile = txtFileInput.files[0];
+                const messageType = messageTypeSelect.value;
+                const sendToContacts = sendToContactsCheckbox.checked;
+                const sendToGroups = sendToGroupsCheckbox.checked;
+                const includeNames = includeNamesCheckbox.checked;
 
-                if (!prefix || !csvFile || !txtFile) {
-                    statusDiv.textContent = 'Please fill in all the required fields.';
+                if (!sendToContacts && !sendToGroups) {
+                    statusDiv.textContent = 'Please select at least one destination (contacts or groups)';
                     return;
                 }
 
                 const formData = new FormData();
                 formData.append('prefix', prefix);
-                formData.append('messageFile', txtFile); 
-                formData.append('numbersFile', csvFile); 
+                formData.append('messageType', messageType);
+                formData.append('sendToContacts', sendToContacts);
+                formData.append('sendToGroups', sendToGroups);
+                formData.append('includeNames', includeNames);
+
+                if (sendToContacts) {
+                    const csvFile = csvFileInput.files[0];
+                    if (!csvFile) {
+                        statusDiv.textContent = 'Please upload a contacts CSV file';
+                        return;
+                    }
+                    formData.append('numbersFile', csvFile);
+                }
+
+                if (sendToGroups) {
+                    const groupFile = groupFileInput.files[0];
+                    if (!groupFile) {
+                        statusDiv.textContent = 'Please upload a groups CSV file';
+                        return;
+                    }
+                    formData.append('groupsFile', groupFile);
+                }
+
+                if (messageType === 'text') {
+                    const txtFile = txtFileInput.files[0];
+                    if (!txtFile) {
+                        statusDiv.textContent = 'Please upload a message TXT file';
+                        return;
+                    }
+                    formData.append('messageFile', txtFile);
+                } else {
+                    const mediaFile = mediaFileInput.files[0];
+                    const captionFile = captionFileInput.files[0];
+                    if (!mediaFile) {
+                        statusDiv.textContent = 'Please upload a media file';
+                        return;
+                    }
+                    formData.append('mediaFile', mediaFile);
+                    if (captionFile) {
+                        formData.append('captionFile', captionFile);
+                    }
+                }
 
                 try {
-
-                    const response = await fetch('http://localhost:8000/login_and_send', { 
+                    const response = await fetch('http://localhost:8000/login_and_send', {
                         method: 'POST',
                         body: formData
                     });
@@ -124,7 +259,6 @@
 
                     if (response.ok) {
                         statusDiv.textContent = data.message;
-
                     } else {
                         statusDiv.textContent = `Error: ${data.error || 'Failed to initiate login.'}`;
                     }
@@ -133,6 +267,22 @@
                 }
             });
         });
+
+        function openTab(tabId) {
+            
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            
+            document.getElementById(tabId).classList.add('active');
+            
+            
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
     </script>
 </body>
 </html>
