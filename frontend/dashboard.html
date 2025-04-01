@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Message Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .read { background: #25D366; color: white; }
+        .delivered { background: #34B7F1; color: white; }
+        .failed { background: #FF3B30; color: white; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+        }
+        input, select, button {
+            padding: 8px 12px;
+            margin-right: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        button {
+            background: #25D366;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #128C7E;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: #FF3B30;
+            padding: 10px;
+            background: #FFEBEE;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>WhatsApp Message statics </h1>
+    
+    <div class="search-bar">
+        <input type="text" id="searchContact" placeholder="Search contact or message...">
+        <select id="statusFilter">
+            <option value="all">All Statuses</option>
+            <option value="read">Read</option>
+            <option value="delivered">Delivered</option>
+            <option value="failed">Failed</option>
+        </select>
+        <button onclick="loadData()" id="refreshBtn">
+            <span id="refreshText">Refresh</span>
+            <span id="refreshSpinner" class="loading" style="display: none;"></span>
+        </button>
+    </div>
+    
+    <div id="errorContainer" class="error-message" style="display: none;"></div>
+    
+    <div class="dashboard">
+        <div class="card">
+            <h2>Delivery Summary</h2>
+            <canvas id="summaryChart"></canvas>
+        </div>
+        
+        <div class="card">
+            <h2>Recent Messages</h2>
+            <div class="table-container">
+                <table id="messagesTable">
+                    <thead>
+                        <tr>
+                            <th>Contact</th>
+                            <th>Message</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="messagesBody">
+                       
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        const API_BASE_URL = 'http://localhost:8000';
+        let summaryChart = null;
+        
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            
+            setInterval(loadData, 3000000);
+        });
+        
+        
+        async function loadData() {
+            try {
+                
+                document.getElementById('refreshText').textContent = 'Loading...';
+                document.getElementById('refreshSpinner').style.display = 'inline-block';
+                document.getElementById('refreshBtn').disabled = true;
+                hideError();
+                
+                const response = await axios.get(`${API_BASE_URL}/message_analytics`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.data.status !== 'success') {
+                    throw new Error(response.data.message || 'Invalid response from server');
+                }
+                
+                updateSummaryChart(response.data.summary);
+                updateMessagesTable(response.data.messages);
+                
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                showError(`Failed to load analytics data: ${error.message}`);
+            } finally {
+                
+                document.getElementById('refreshText').textContent = 'Refresh';
+                document.getElementById('refreshSpinner').style.display = 'none';
+                document.getElementById('refreshBtn').disabled = false;
+            }
+        }
+        
+        function updateSummaryChart(summary) {
+            const ctx = document.getElementById('summaryChart').getContext('2d');
+            
+            
+            if (summaryChart) {
+                summaryChart.destroy();
+            }
+            
+            summaryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Read', 'Delivered', 'Failed'],
+                    datasets: [{
+                        data: [
+                            summary.read || 0, 
+                            summary.delivered || 0, 
+                            summary.failed || 0
+                        ],
+                        backgroundColor: [
+                            '#25D366',
+                            '#34B7F1',
+                            '#FF3B30'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateMessagesTable(messages) {
+            const tbody = document.getElementById('messagesBody');
+            tbody.innerHTML = '';
+            
+            const searchTerm = document.getElementById('searchContact').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            
+            const filteredMessages = messages.filter(msg => {
+                const contactMatches = msg.contact?.toLowerCase().includes(searchTerm) || false;
+                const messageMatches = msg.message?.toLowerCase().includes(searchTerm) || false;
+                const statusMatches = statusFilter === 'all' || msg.status === statusFilter;
+                return (contactMatches || messageMatches) && statusMatches;
+            });
+            
+          
+            if (filteredMessages.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="4" style="text-align: center;">No messages found matching your criteria</td>`;
+                tbody.appendChild(row);
+            } else {
+                filteredMessages.forEach(msg => {
+                    const row = document.createElement('tr');
+                    const messagePreview = msg.message ? 
+                        `${msg.message.substring(0, 30)}${msg.message.length > 30 ? '...' : ''}` : 
+                        'No message content';
+                    
+                    row.innerHTML = `
+                        <td>${msg.contact || 'Unknown'}</td>
+                        <td title="${msg.message || ''}">${messagePreview}</td>
+                        <td><span class="status-badge ${msg.status}">${msg.status || 'unknown'}</span></td>
+                        <td>${formatTimestamp(msg.timestamp)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+        }
+        
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'Unknown';
+            try {
+                return new Date(timestamp).toLocaleString();
+            } catch {
+                return timestamp;
+            }
+        }
+        
+        function showError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.textContent = message;
+            errorContainer.style.display = 'block';
+        }
+        
+        function hideError() {
+            document.getElementById('errorContainer').style.display = 'none';
+        }
+        
+        
+        document.getElementById('searchContact').addEventListener('input', loadData);
+        document.getElementById('statusFilter').addEventListener('change', loadData);
+    </script>
+</body>
+</html>

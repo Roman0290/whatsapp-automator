@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
             background-color: #f4f4f4;
             color: #333;
         }
+
         .container {
             background-color: #fff;
             padding: 20px;
@@ -19,10 +21,12 @@
             max-width: 500px;
             margin: 0 auto;
         }
+
         h1 {
             text-align: center;
-            color: #075e54; 
+            color: #075e54;
         }
+
         button {
             background-color: #075e54;
             color: white;
@@ -34,50 +38,69 @@
             width: 100%;
             margin-top: 20px;
         }
+
         button:hover {
             background-color: #054f48;
         }
+
         #status {
             margin-top: 20px;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
             background-color: #f9f9f9;
-            white-space: pre-wrap; 
+            white-space: pre-wrap;
         }
+
         .input-group {
             margin-bottom: 15px;
         }
+
         label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="text"], input[type="file"], select { 
+
+        input[type="text"],
+        input[type="file"],
+        select,
+        textarea {
             width: calc(100% - 12px);
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
         }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
         .checkbox-group {
             margin: 10px 0;
         }
+
         .checkbox-group label {
             display: inline;
             font-weight: normal;
             margin-left: 5px;
         }
+
         .tab {
             display: none;
         }
+
         .tab.active {
             display: block;
         }
+
         .tab-buttons {
             display: flex;
             margin-bottom: 15px;
         }
+
         .tab-button {
             flex: 1;
             padding: 10px;
@@ -85,19 +108,26 @@
             border: none;
             cursor: pointer;
         }
+
         .tab-button.active {
             background-color: #075e54;
             color: white;
         }
+
+        a {
+            text-decoration: none;
+            color: white;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
-        <h1>WhatsApp Automator</h1>
+        <h1>WhatsApp Post</h1>
 
         <div class="tab-buttons">
-            <button class="tab-button active" onclick="openTab('contacts-tab')">Contacts</button>
-            <button class="tab-button" onclick="openTab('groups-tab')">Groups</button>
+            <button class="tab-button active" onclick="openTab('contacts-tab', this)">Contacts</button>
+            <button class="tab-button" onclick="openTab('groups-tab', this)">Groups</button>
         </div>
 
         <div id="contacts-tab" class="tab active">
@@ -133,15 +163,19 @@
         </div>
 
         <div class="input-group" id="textMessageGroup">
-            <label for="txtFile">Message TXT File:</label>
+            <label for="messageText">Message Text:</label>
+            <textarea id="messageText" placeholder="Enter your message here..."></textarea>
+            <small>Or upload a file below</small>
             <input type="file" id="txtFile" accept=".txt">
         </div>
 
         <div class="input-group" id="mediaGroup" style="display: none;">
             <label for="mediaFile">Media File:</label>
             <input type="file" id="mediaFile" accept="image/*,video/*,application/pdf">
-            
-            <label for="captionFile" style="margin-top: 10px;">Caption TXT File:</label>
+
+            <label for="captionText" style="margin-top: 10px;">Caption Text:</label>
+            <textarea id="captionText" placeholder="Enter your caption here..."></textarea>
+            <small>Or upload a file below</small>
             <input type="file" id="captionFile" accept=".txt">
         </div>
 
@@ -160,6 +194,7 @@
         <div id="status">
             Waiting for action...
         </div>
+        <button id="insightsButton"><a href="./dashboard.html">Insights</a></button>
     </div>
 
     <script>
@@ -168,9 +203,11 @@
             const statusDiv = document.getElementById('status');
             const prefixInput = document.getElementById('prefix');
             const csvFileInput = document.getElementById('csvFile');
+            const messageTextInput = document.getElementById('messageText');
             const txtFileInput = document.getElementById('txtFile');
             const groupFileInput = document.getElementById('groupFile');
             const mediaFileInput = document.getElementById('mediaFile');
+            const captionTextInput = document.getElementById('captionText');
             const captionFileInput = document.getElementById('captionFile');
             const messageTypeSelect = document.getElementById('messageType');
             const textMessageGroup = document.getElementById('textMessageGroup');
@@ -178,6 +215,19 @@
             const sendToContactsCheckbox = document.getElementById('sendToContacts');
             const sendToGroupsCheckbox = document.getElementById('sendToGroups');
             const includeNamesCheckbox = document.getElementById('includeNames');
+
+            // Sync checkboxes with tabs
+            sendToContactsCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    openTab('contacts-tab', document.querySelector('.tab-button.active'));
+                }
+            });
+
+            sendToGroupsCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    openTab('groups-tab', document.querySelector('.tab-button.active'));
+                }
+            });
 
             // Show/hide message type fields
             messageTypeSelect.addEventListener('change', () => {
@@ -190,99 +240,149 @@
                 }
             });
 
-            loginButton.addEventListener('click', async () => {
-                statusDiv.textContent = 'Initiating login process...';
-
-                const prefix = prefixInput.value.trim();
-                const messageType = messageTypeSelect.value;
-                const sendToContacts = sendToContactsCheckbox.checked;
-                const sendToGroups = sendToGroupsCheckbox.checked;
-                const includeNames = includeNamesCheckbox.checked;
-
-                if (!sendToContacts && !sendToGroups) {
-                    statusDiv.textContent = 'Please select at least one destination (contacts or groups)';
-                    return;
-                }
-
-                const formData = new FormData();
-                formData.append('prefix', prefix);
-                formData.append('messageType', messageType);
-                formData.append('sendToContacts', sendToContacts);
-                formData.append('sendToGroups', sendToGroups);
-                formData.append('includeNames', includeNames);
-
-                if (sendToContacts) {
-                    const csvFile = csvFileInput.files[0];
-                    if (!csvFile) {
-                        statusDiv.textContent = 'Please upload a contacts CSV file';
-                        return;
-                    }
-                    formData.append('numbersFile', csvFile);
-                }
-
-                if (sendToGroups) {
-                    const groupFile = groupFileInput.files[0];
-                    if (!groupFile) {
-                        statusDiv.textContent = 'Please upload a groups CSV file';
-                        return;
-                    }
-                    formData.append('groupsFile', groupFile);
-                }
-
-                if (messageType === 'text') {
-                    const txtFile = txtFileInput.files[0];
-                    if (!txtFile) {
-                        statusDiv.textContent = 'Please upload a message TXT file';
-                        return;
-                    }
-                    formData.append('messageFile', txtFile);
-                } else {
-                    const mediaFile = mediaFileInput.files[0];
-                    const captionFile = captionFileInput.files[0];
-                    if (!mediaFile) {
-                        statusDiv.textContent = 'Please upload a media file';
-                        return;
-                    }
-                    formData.append('mediaFile', mediaFile);
-                    if (captionFile) {
-                        formData.append('captionFile', captionFile);
-                    }
-                }
-
-                try {
-                    const response = await fetch('http://localhost:8000/login_and_send', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        statusDiv.textContent = data.message;
-                    } else {
-                        statusDiv.textContent = `Error: ${data.error || 'Failed to initiate login.'}`;
-                    }
-                } catch (error) {
-                    statusDiv.textContent = `Error: Could not connect to the backend. ${error}`;
+            // Handle text file upload for message
+            txtFileInput.addEventListener('change', function () {
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        messageTextInput.value = e.target.result;
+                    };
+                    reader.readAsText(file);
                 }
             });
+
+            // Handle text file upload for caption
+            captionFileInput.addEventListener('change', function () {
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        captionTextInput.value = e.target.result;
+                    };
+                    reader.readAsText(file);
+                }
+            });
+
+            loginButton.addEventListener('click', async () => {
+    statusDiv.textContent = 'Initiating login process...';
+
+    const prefix = prefixInput.value.trim();
+    const messageType = messageTypeSelect.value;
+    const sendToContacts = sendToContactsCheckbox.checked;
+    const sendToGroups = sendToGroupsCheckbox.checked;
+    const includeNames = includeNamesCheckbox.checked;
+
+    if (!sendToContacts && !sendToGroups) {
+        statusDiv.textContent = 'Please select at least one destination (contacts or groups)';
+        return;
+    }
+
+    let message = messageTextInput.value.trim();
+    let caption = captionTextInput.value.trim();
+
+    if (messageType === 'text' && !message && txtFileInput.files[0]) {
+        const file = txtFileInput.files[0];
+        message = await readFileAsText(file);
+    } else if (messageType === 'media' && !caption && captionFileInput.files[0]) {
+        const file = captionFileInput.files[0];
+        caption = await readFileAsText(file);
+    }
+
+    if (messageType === 'text' && !message) {
+        statusDiv.textContent = 'Please enter a message or upload a text file';
+        return;
+    } else if (messageType === 'media' && !caption && mediaFileInput.files[0]) {
+        statusDiv.textContent = 'Please enter a caption or upload a text file';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('prefix', prefix);
+    formData.append('messageType', messageType);
+    formData.append('sendToContacts', sendToContacts);
+    formData.append('sendToGroups', sendToGroups);
+    formData.append('includeNames', includeNames);
+
+    if (messageType === 'text') {
+        formData.append('messageText', message); // Direct text input
+        if (txtFileInput.files[0]) {
+            formData.append('messageFile', txtFileInput.files[0]); // File upload
+        }
+    } else if (messageType === 'media') {
+        formData.append('captionText', caption); // Direct caption input
+        if (captionFileInput.files[0]) {
+            formData.append('captionFile', captionFileInput.files[0]); // File upload
+        }
+    }
+
+    if (sendToContacts && csvFileInput.files[0]) {
+        formData.append('numbersFile', csvFileInput.files[0]);
+    }
+
+    if (sendToGroups && groupFileInput.files[0]) {
+        formData.append('groupsFile', groupFileInput.files[0]);
+    }
+
+    if (messageType === 'media' && mediaFileInput.files[0]) {
+        formData.append('mediaFile', mediaFileInput.files[0]);
+    }
+
+    try {
+        const response = await fetch('http://localhost:8000/login_and_send', {
+            method: 'POST',
+            body: formData
         });
 
-        function openTab(tabId) {
-            
+        const data = await response.json();
+
+        if (response.ok) {
+            statusDiv.textContent = data.message;
+        } else {
+            statusDiv.textContent = `Error: ${data.detail || 'Failed to initiate login.'}`;
+        }
+    } catch (error) {
+        statusDiv.textContent = `Error: Could not connect to the backend. ${error}`;
+    }
+});
+        });
+        function openTab(tabId, button) {
+            // Hide all tabs
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
-            
+
+            // Show selected tab
             document.getElementById(tabId).classList.add('active');
-            
-            
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active');
+
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
             });
-            event.currentTarget.classList.add('active');
+            button.classList.add('active');
+
+            // Update checkboxes based on active tab
+            const sendToContacts = document.getElementById('sendToContacts');
+            const sendToGroups = document.getElementById('sendToGroups');
+
+            if (tabId === 'contacts-tab') {
+                sendToContacts.checked = true;
+                sendToGroups.checked = false;
+            } else if (tabId === 'groups-tab') {
+                sendToContacts.checked = false;
+                sendToGroups.checked = true;
+            }
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = event => resolve(event.target.result);
+                reader.onerror = error => reject(error);
+                reader.readAsText(file);
+            });
         }
     </script>
 </body>
+
 </html>

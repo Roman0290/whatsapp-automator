@@ -5,3 +5,10 @@ logs/*
 data/*
 /venv
 /chrome-data
+/whatsapp
+__pycache__/
+*.pyc
+chrome_profile_*/
+backend/uploads/
+frontend/public/
+backend/data.lnk
