@@ -105,39 +105,102 @@ class Bot:
             self.driver.quit()
             print(Fore.YELLOW, "Driver closed successfully.", Style.RESET_ALL)
 
-    def send_message_to_contact(self, url, message):
-        """
-        Sends a message to a specific contact using WhatsApp Web.
-        """
-        try:
-            self.driver.get(url)
-
+    def send_message_to_contact(self, url, message, max_retries=3):
+    
+        message_sent = False
+        last_exception = None
+        
+        for attempt in range(max_retries):
             try:
-                message_box = WebDriverWait(self.driver, timeout).until(
-                    EC.element_to_be_clickable((By.XPATH, self.__main_selector))
-                )
-            except:
-                message_box = WebDriverWait(self.driver, timeout).until(
-                    EC.element_to_be_clickable((By.XPATH, self.__fallback_selector))
-                )
+                if not message_sent:  
+                    self.driver.get(url)
+                    
+                    WebDriverWait(self.driver, 20).until(
+                        lambda d: d.execute_script("return document.readyState") == "complete"
+                    )
+                    sleep(2)  
 
-            if self._options[1]:  # If media is included
-                message_box.send_keys(Keys.CONTROL, 'v')
-                sleep(random.uniform(2, 5))
-                message_box = WebDriverWait(self.driver, timeout).until(
-                    EC.element_to_be_clickable((By.XPATH, self.__media_selector))
-                )
+                    selectors = [
+                        "//div[@contenteditable='true'][@data-tab='10']",  
+                        "//div[@contenteditable='true'][@data-tab='9']",   
+                        "//div[contains(@class, 'selectable-text')]"       
+                    ]
 
-            message_box.send_keys(message)
-            self.click_button("span[data-icon='send']")
-            sleep(random.uniform(2, 5))
+                    message_box = None
+                    for selector in selectors:
+                        try:
+                            message_box = WebDriverWait(self.driver, 15).until(
+                                EC.presence_of_element_located((By.XPATH, selector))
+                            )
+                            break
+                        except:
+                            continue
 
-            print(Fore.GREEN + "Message sent successfully." + Style.RESET_ALL)
-            return False  
+                    if not message_box:
+                        raise Exception("Could not find message input box")
 
-        except Exception as e:
-            print(Fore.RED + f"Error sending message: {e}" + Style.RESET_ALL)
-            return True  
+                   
+                    try:
+                        message_box.clear()
+                        message_box.send_keys(message)
+                    except StaleElementReferenceException:
+                        
+                        message_box = WebDriverWait(self.driver, 10).until(
+                            EC.presence_of_element_located((By.XPATH, selectors[0]))
+                        )
+                        message_box.clear()
+                        message_box.send_keys(message)
+
+                    
+                    send_button_selectors = [
+                        "span[data-icon='send']",
+                        "button[aria-label='Send']",
+                        "//span[@data-testid='send']"
+                    ]
+                    
+                    send_success = False
+                    for selector in send_button_selectors:
+                        try:
+                            if 'span' in selector or 'button' in selector:
+                                send_button = WebDriverWait(self.driver, 10).until(
+                                    EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                                )
+                            else:
+                                send_button = WebDriverWait(self.driver, 10).until(
+                                    EC.element_to_be_clickable((By.XPATH, selector))
+                                )
+                            
+                            try:
+                                send_button.click()
+                                send_success = True
+                                break
+                            except:
+                                self.driver.execute_script("arguments[0].click();", send_button)
+                                send_success = True
+                                break
+                        except:
+                            continue
+
+                    if not send_success:
+                        
+                        message_box.send_keys(Keys.RETURN)
+
+                    
+                    sleep(2)  
+                    message_sent = True
+                    print(Fore.GREEN + "Message sent successfully." + Style.RESET_ALL)
+                    return False  
+
+            except Exception as e:
+                last_exception = e
+                print(Fore.YELLOW + f"Attempt {attempt + 1} failed: {str(e)}" + Style.RESET_ALL)
+                if attempt < max_retries - 1:
+                    sleep(2 * (attempt + 1))  
+                continue
+
+        
+        print(Fore.RED + f"Failed to send message after {max_retries} attempts. Last error: {str(last_exception)}" + Style.RESET_ALL)
+        return True  
 
     def send_messages_to_all_contacts(self):
         """
@@ -289,6 +352,45 @@ class Bot:
         with open(log_path, "a") as logfile:
             logfile.write(number.strip() + "\n")
 
+    def check_message_status(self, message_text=None):
+        """
+        Checks if the last message (or a specific message) has been read.
+        Returns: "read", "delivered", "unknown", or "error"
+        """
+        try:
+            
+            status_elements = self.driver.find_elements(
+                By.XPATH, "//span[@data-testid='msg-dblcheck' or @data-testid='msg-check']"
+            )
+            
+            
+            if message_text:
+                messages = self.driver.find_elements(
+                    By.XPATH, f"//div[contains(@class, 'message-out')]//div[contains(., '{message_text}')]"
+                )
+                if messages:
+                    status = messages[-1].find_element(
+                        By.XPATH, ".//following-sibling::div//span[@data-testid]"
+                    )
+                    return "read" if status.get_attribute("data-testid") == "msg-dblcheck" else "delivered"
+            
+            
+            if status_elements:
+                last_status = status_elements[-1].get_attribute("data-testid")
+                return "read" if last_status == "msg-dblcheck" else "delivered"
+                
+            return "unknown"
+            
+        except Exception as e:
+            print(f"Error checking message status: {e}")
+            return "error"
+
+
+        
+
+
+
+
     @property
     def message(self):
         return self._message
@@ -321,3 +423,6 @@ class Bot:
     @options.setter
     def options(self, opt):
         self._options = opt
+
+    
+    

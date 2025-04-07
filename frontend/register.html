@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #25d366, #128c7e);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            width: 400px;
+            text-align: center;
+            color: black;
+        }
+        h1 {
+            color: #075e54;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, select {
+            width: 94%;
+            padding: 10px;
+            border: 2px solid #25d366;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        button {
+            background: #075e54;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 17px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #128c7e;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Register</h1>
+        
+        <div class="input-group">
+            <label for="fullName">Full Name:</label>
+            <input type="text" id="fullName" placeholder="Enter your full name">
+        </div>
+        
+        <div class="input-group">
+            <label for="whatsappUser">WhatsApp Username:</label>
+            <input type="text" id="whatsappUser" placeholder="Enter your WhatsApp username">
+        </div>
+        
+        <div class="input-group">
+            <label for="number">Phone Number:</label>
+            <input type="text" id="number" placeholder="Enter phone number">
+        </div>
+        
+        <div class="input-group">
+            <label for="preference">Preference:</label>
+            <select id="preference">
+                <option value="bulk">Bulk Message</option>
+                <option value="group">Send to Group</option>
+            </select>
+        </div>
+        
+        <button onclick="connectToWhatsApp()" id="registerButton">Register</button>
+    </div>
+
+    <script>
+        // Check login status on page load
+        window.onload = function () {
+            checkLoginStatus();
+        };
+
+        function checkLoginStatus() {
+            if (localStorage.getItem("whatsappLoggedIn") === "true") {
+                window.location.href = "home.html"; // Redirect if already logged in
+            }
+        }
+
+        function connectToWhatsApp() {
+            let fullName = document.getElementById("fullName").value.trim();
+            let whatsappUser = document.getElementById("whatsappUser").value.trim();
+            let phoneNumber = document.getElementById("number").value.trim();
+            let preference = document.getElementById("preference").value;
+
+            if (!fullName || !whatsappUser || !phoneNumber) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            // Save user details in localStorage
+            localStorage.setItem("fullName", fullName);
+            localStorage.setItem("whatsappUser", whatsappUser);
+            localStorage.setItem("phoneNumber", phoneNumber);
+            localStorage.setItem("preference", preference);
+
+            // Open WhatsApp Web for login
+            window.open("https://web.whatsapp.com/", "_blank");
+
+            // Wait for confirmation
+            waitForWhatsAppLogin();
+        }
+
+        function waitForWhatsAppLogin() {
+            setTimeout(() => {
+                let confirmed = confirm("Have you logged into WhatsApp?");
+                if (confirmed) {
+                    localStorage.setItem("whatsappLoggedIn", "true");
+                    window.location.href = "home.html"; // Redirect to Home
+                } else {
+                    alert("Please log in to WhatsApp first.");
+                    waitForWhatsAppLogin(); // Keep asking until confirmed
+                }
+            }, 2000);
+        }
+
+        function logout() {
+            localStorage.removeItem("whatsappLoggedIn");
+            alert("Logged out successfully.");
+            window.location.href = "register.html"; // Redirect to Register
+        }
+    </script>
+
+</body>
+</html>
