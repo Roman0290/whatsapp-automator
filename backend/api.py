@@ -219,94 +219,103 @@ async def cleanup_resources(file_paths: dict):
 @app.get("/message_analytics")
 async def get_message_analytics():
     try:
-        # Ensure log directory exists
         if not os.path.exists(LOG_FOLDER):
-            logger.warning(f"Log directory {LOG_FOLDER} does not exist")
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "status": "success",
-                    "summary": {"read": 0, "delivered": 0, "failed": 0},
-                    "messages": [],
-                    "last_updated": datetime.now().isoformat()
-                }
-            )
-
-        log_files = []
-        try:
-            log_files = [f for f in os.listdir(LOG_FOLDER) 
-                        if f.endswith((".txt", ".json")) 
-                        and os.path.isfile(os.path.join(LOG_FOLDER, f))]
-        except Exception as e:
-            logger.error(f"Error reading log directory: {str(e)}")
-            raise HTTPException(
-                status_code=500,
-                detail="Could not read log files"
-            )
+            return JSONResponse(content={
+                "status": "success",
+                "summary": {"read": 0, "delivered": 0, "failed": 0, "sent": 0},
+                "messages": [],
+                "last_updated": datetime.now().isoformat()
+            })
 
         messages = []
-        summary = {"read": 0, "delivered": 0, "failed": 0}
-        
-        for log_file in log_files:
-            try:
-                file_path = os.path.join(LOG_FOLDER, log_file)
-                with open(file_path, "r", encoding='utf-8') as f:
-                    if log_file.endswith(".json"):
-                        for line in f:
-                            try:
-                                data = json.loads(line)
-                                status = data.get("status", "unknown").lower()
-                                if status in summary:
-                                    summary[status] += 1
-                                messages.append({
-                                    "contact": data.get("number", "Unknown"),
-                                    "message": data.get("message", ""),
-                                    "status": status,
-                                    "timestamp": data.get("timestamp", datetime.now().isoformat())
-                                })
-                            except json.JSONDecodeError:
-                                logger.warning(f"Invalid JSON in {log_file}: {line}")
-                                continue
-                    else:
-                        for line in f:
-                            line = line.strip()
-                            if line:
-                                status = "read" if "sent" in log_file else "failed"
+        summary = {"read": 0, "delivered": 0, "failed": 0, "sent": 0}
+
+
+        for filename in os.listdir(LOG_FOLDER):
+            filepath = os.path.join(LOG_FOLDER, filename)
+            
+            # Process detailed JSON logs
+            if filename.endswith('_detailed.json'):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        try:
+                            data = json.loads(line)
+                            status = data.get("status", "").lower()
+                            
+                            # Normalize status values
+                            if "read" in status:
+                                status = "read"
+                            elif "delivered" in status:
+                                status = "delivered"
+                            elif "sent" in status:
+                                status = "sent"
+                            elif "fail" in status:
+                                status = "failed"
+                            else:
+                                status = "unknown"
+                            
+                            if status in summary:
                                 summary[status] += 1
-                                messages.append({
-                                    "contact": line,
-                                    "message": "",
-                                    "status": status,
-                                    "timestamp": datetime.now().isoformat()
-                                })
-            except Exception as e:
-                logger.error(f"Error processing log file {log_file}: {str(e)}")
-                continue
-        
-       
+                            
+                            messages.append({
+                                "contact": data.get("contact", "Unknown"),
+                                "message": data.get("message", ""),
+                                "status": status,
+                                "timestamp": data.get("timestamp", datetime.now().isoformat())
+                            })
+                        except json.JSONDecodeError:
+                            continue
+            
+            # Process legacy text logs
+            elif filename.endswith('_sent.txt'):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if line.strip():
+                            messages.append({
+                                "contact": line.strip(),
+                                "message": "",
+                                "status": "delivered",
+                                "timestamp": datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
+                            })
+                            summary["delivered"] += 1
+            
+            elif filename.endswith('_notsent.txt'):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if line.strip():
+                            messages.append({
+                                "contact": line.strip(),
+                                "message": "",
+                                "status": "failed",
+                                "timestamp": datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
+                            })
+                            summary["failed"] += 1
+
+        # Sort messages by timestamp (newest first)
         messages_sorted = sorted(
             messages,
             key=lambda x: x.get("timestamp", ""),
             reverse=True
-        )[:100]  
+        )[:200]  # Limit to 200 most recent messages
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                "status": "success",
-                "summary": summary,
-                "messages": messages_sorted,
-                "last_updated": datetime.now().isoformat()
-            }
-        )
-        
-    except HTTPException:
-        raise
+        return JSONResponse(content={
+            "status": "success",
+            "summary": summary,
+            "messages": messages_sorted,
+            "last_updated": datetime.now().isoformat()
+        })
+
+
     except Exception as e:
-        logger.error(f"Unexpected error in analytics: {str(e)}", exc_info=True)
-        raise HTTPException(
+        logger.error(f"Error in analytics: {str(e)}", exc_info=True)
+        return JSONResponse(
             status_code=500,
-            detail=f"Failed to generate analytics: {str(e)}"
+            content={
+                "status": "error",
+                "message": str(e),
+                "summary": {"read": 0, "delivered": 0, "failed": 0, "sent": 0},
+                "messages": []
+            }
         )
 async def generate_analytics_data() -> dict:
     try:
@@ -362,7 +371,6 @@ async def serve_dashboard():
             return HTMLResponse(f.read())
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Dashboard not found")
-    
 
 
 @app.post("/api/send-whatsapp")

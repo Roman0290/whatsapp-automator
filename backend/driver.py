@@ -1,4 +1,6 @@
 import csv
+from datetime import datetime
+import json
 import os.path
 import random
 import time
@@ -139,7 +141,7 @@ class Bot:
                     if not message_box:
                         raise Exception("Could not find message input box")
 
-                
+                   
                     try:
                         message_box.clear()
                         message_box.send_keys(message)
@@ -200,36 +202,8 @@ class Bot:
 
         
         print(Fore.RED + f"Failed to send message after {max_retries} attempts. Last error: {str(last_exception)}" + Style.RESET_ALL)
-        return True  
+        return True
 
-    def send_messages_to_all_contacts(self):
-        """
-        Sends messages to all contacts listed in the provided CSV file.
-        """
-        if not os.path.isfile(self._csv_numbers):
-            print(Fore.RED, "Contact CSV file not found!", Style.RESET_ALL)
-            return
-
-        try:
-            with open(self._csv_numbers, mode="r") as file:
-                csv_reader = csv.reader(file)
-
-                for row in csv_reader:
-                    name, number = row[0], row[1]
-                    print(f"Sending message to: {name} | {number}")
-
-                    message = self._message.replace("%NAME%", name) if self._options[0] else self._message
-                    url = self.construct_whatsapp_url(number)
-
-                    error = self.send_message_to_contact(url, message)
-                    self.log_result(number, error)
-
-                    sleep(random.uniform(1, 10))
-
-        except Exception as e:
-            print(Fore.RED + f"Error in send_messages_to_all_contacts: {e}" + Style.RESET_ALL)
-        finally:
-            pass 
 
     def send_message_to_group(self, group_name, message):
         """Searches for and sends a message to a group by its name."""
@@ -327,9 +301,7 @@ class Bot:
 
 
     def wait_for_element_to_be_clickable(self, xpath, success_message=None, error_message=None):
-        """
-        Waits for an element to be clickable.
-        """
+       
         try:
             WebDriverWait(self.driver, timeout).until(
                 EC.element_to_be_clickable((By.XPATH, xpath))
@@ -342,48 +314,65 @@ class Bot:
                 print(Fore.RED + error_message + Style.RESET_ALL)
             return False
 
-    def log_result(self, number, error):
-        """
-        Logs the result of each message sent attempt.
-        """
-        assert self._start_time is not None
-        log_path = f"logs/{self._start_time}_{'notsent' if error else 'sent'}.txt"
-
-        with open(log_path, "a") as logfile:
-            logfile.write(number.strip() + "\n")
+    def log_result(self, contact, error=None, status=None):
+        
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "contact": str(contact),
+            "status": status if status else ("failed" if error else "delivered"),
+            "message": str(self._message)[:200]  
+        }
+        
+        
+        if not error and not status:
+            try:
+                current_status = self.check_message_status()
+                log_entry["status"] = current_status
+            except Exception as e:
+                print(f"Status check error: {e}")
+                log_entry["status"] = "delivered"
+        
+   
+        log_path = os.path.join("logs", f"{self._start_time}_detailed.json")
+        with open(log_path, "a", encoding='utf-8') as f:
+            json.dump(log_entry, f, ensure_ascii=False)
+            f.write("\n")
+        
+       
+        text_log_path = os.path.join("logs", f"{self._start_time}_{'notsent' if error else 'sent'}.txt")
+        with open(text_log_path, "a", encoding='utf-8') as f:
+            f.write(f"{contact}\n")
 
     def check_message_status(self, message_text=None):
-        """
-        Checks if the last message (or a specific message) has been read.
-        Returns: "read", "delivered", "unknown", or "error"
-        """
         try:
-            
-            status_elements = self.driver.find_elements(
-                By.XPATH, "//span[@data-testid='msg-dblcheck' or @data-testid='msg-check']"
+           
+            outgoing_messages = self.driver.find_elements(
+                By.XPATH, "//div[contains(@class, 'message-out')]"
             )
             
-            
-            if message_text:
-                messages = self.driver.find_elements(
-                    By.XPATH, f"//div[contains(@class, 'message-out')]//div[contains(., '{message_text}')]"
-                )
-                if messages:
-                    status = messages[-1].find_element(
-                        By.XPATH, ".//following-sibling::div//span[@data-testid]"
-                    )
-                    return "read" if status.get_attribute("data-testid") == "msg-dblcheck" else "delivered"
-            
-            
-            if status_elements:
-                last_status = status_elements[-1].get_attribute("data-testid")
-                return "read" if last_status == "msg-dblcheck" else "delivered"
+            if not outgoing_messages:
+                return "unknown"
                 
-            return "unknown"
             
+            last_message = outgoing_messages[-1]
+            
+            
+            try:
+                status = last_message.find_element(
+                    By.XPATH, ".//span[@data-testid='msg-dblcheck' or @data-testid='msg-check']"
+                )
+                return "read" if status.get_attribute("data-testid") == "msg-dblcheck" else "delivered"
+            except:
+                
+                try:
+                    last_message.find_element(By.XPATH, ".//div[contains(@class, 'copyable-text')]")
+                    return "sent" 
+                except:
+                    return "failed"  
         except Exception as e:
             print(f"Error checking message status: {e}")
             return "error"
+
 
 
         
