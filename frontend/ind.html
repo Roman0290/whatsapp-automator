@@ -51,10 +51,19 @@
 </head>
 <body>
     <div class="container">
-        <h1>Connect to WhatsApp</h1>
-        <a href="register.html"><button onclick="connectToWhatsApp()">Connect with WhatsApp</button></a>
+       <button type="button" onclick="connectToWhatsApp(event)">Connect with WhatsApp</button>
     </div>
     
-   
+    <script>
+        function connectToWhatsApp(event) {
+            
+            event.preventDefault();
+            if (localStorage.getItem("whatsappLoggedIn") === "true") {
+                window.location.href = "home.html"; 
+            }
+
+            window.location.href = "register.html";
+        }
+    </script>
 </body>
 </html>

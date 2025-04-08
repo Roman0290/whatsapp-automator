@@ -271,6 +271,8 @@ class Bot:
             print(Fore.RED + f"Error sending message to group '{group_name}': {e}" + Style.RESET_ALL)
             print(Fore.RED + f"Stacktrace: {traceback.format_exc()}" + Style.RESET_ALL)
             return True
+        
+
     def send_messages_to_all_groups(self):
         """
         Sends messages to all groups listed in the provided CSV file.

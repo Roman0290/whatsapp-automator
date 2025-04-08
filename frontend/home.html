@@ -22,7 +22,7 @@
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
             width: 420px;
             text-align: center;
-            animation: fadeIn 1s ease-in-out;
+            
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
@@ -121,7 +121,7 @@
             <textarea id="message" placeholder="Type your message here..."></textarea>
         </div>
 
-        <a href="dashboard.html"><button id="sendButton">Send Message</button></a>
+       <button type="button" id="sendButton">Send Message</button>
     </div>
 
     <script>
@@ -184,7 +184,7 @@
                 }
 
                 const formData = new FormData();
-                formData.append('contacts', JSON.stringify(contacts)); // Send contacts as a JSON string
+                formData.append('contacts', JSON.stringify(contacts)); 
                 formData.append('message', message);
 
                 fetch('http://127.0.0.1:8000/api/send-whatsapp', {

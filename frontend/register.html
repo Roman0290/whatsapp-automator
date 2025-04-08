@@ -139,10 +139,10 @@
             </select>
         </div>
         
-        <button onclick="connectToWhatsApp()" id="registerButton">Register</button>
+        <button type="button" onclick="connectToWhatsApp()" id="registerButton">Register</button>
     </div>
 
-    <!-- Custom Modal for Confirmation -->
+   
     <div id="customConfirm" class="modal">
         <div class="modal-content">
             <p>Have you logged into WhatsApp?</p>
@@ -154,18 +154,19 @@
     </div>
 
     <script>
-        // Check login status on page load
+       
         window.onload = function () {
             checkLoginStatus();
         };
 
         function checkLoginStatus() {
             if (localStorage.getItem("whatsappLoggedIn") === "true") {
-                window.location.href = "home.html"; // Redirect if already logged in
+                window.location.href = "home.html"; 
             }
         }
 
-        function connectToWhatsApp() {
+        function connectToWhatsApp(event) {
+            if (event) event.preventDefault();
             let fullName = document.getElementById("fullName").value.trim();
             let whatsappUser = document.getElementById("whatsappUser").value.trim();
             let phoneNumber = document.getElementById("number").value.trim();
@@ -176,16 +177,14 @@
                 return;
             }
 
-            // Save user details in localStorage
+         
             localStorage.setItem("fullName", fullName);
             localStorage.setItem("whatsappUser", whatsappUser);
             localStorage.setItem("phoneNumber", phoneNumber);
             localStorage.setItem("preference", preference);
 
-            // Open WhatsApp Web for login
             window.open("https://web.whatsapp.com/", "_blank");
 
-            // Wait for confirmation
             waitForWhatsAppLogin();
         }
 
@@ -202,15 +201,10 @@
                 window.location.href = "home.html";
             } else {
                 alert("Please log in to WhatsApp first.");
-                waitForWhatsAppLogin(); // Keep asking until confirmed
+                waitForWhatsAppLogin(); 
             }
         }
 
-        function logout() {
-            localStorage.removeItem("whatsappLoggedIn");
-            alert("Logged out successfully.");
-            window.location.href = "register.html"; // Redirect to Register
-        }
     </script>
 
 </body>
