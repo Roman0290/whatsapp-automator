@@ -7,85 +7,106 @@
     <title>WhatsApp Automator</title>
     <style>
         body {
-            font-family: sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(to right, #25d366, #128c7e);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
             color: #333;
         }
 
         .container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            max-width: 500px;
-            margin: 0 auto;
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            width: 500px;
+            max-width: 100%;
+            animation: fadeIn 1s ease-in-out;
         }
 
+        
+
         h1 {
+            color: #ffffff;
+            background: linear-gradient(to right, #25d366, #128c7e);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 22px;
+            margin-bottom: 20px;
             text-align: center;
-            color: #075e54;
         }
 
         button {
-            background-color: #075e54;
+            background: linear-gradient(to right, #075e54, #128c7e);
             color: white;
-            padding: 10px 15px;
+            padding: 12px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
             width: 100%;
+            font-size: 17px;
+            font-weight: bold;
+            transition: 0.3s;
             margin-top: 20px;
         }
 
         button:hover {
-            background-color: #054f48;
+            background: linear-gradient(to right, #128c7e, #25d366);
+            transform: scale(1.02);
         }
 
         #status {
             margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: #f9f9f9;
+            padding: 15px;
+            border: 2px solid #25d366;
+            border-radius: 8px;
+            background-color: #f8f8f8;
             white-space: pre-wrap;
         }
 
         .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            text-align: left;
         }
 
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: bold;
+            color: #075e54;
         }
 
         input[type="text"],
         input[type="file"],
         select,
         textarea {
-            width: calc(100% - 12px);
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #25d366;
+            border-radius: 8px;
             box-sizing: border-box;
+            font-size: 15px;
+            background: #f8f8f8;
         }
 
         textarea {
-            min-height: 100px;
+            min-height: 120px;
             resize: vertical;
         }
 
         .checkbox-group {
-            margin: 10px 0;
+            margin: 15px 0;
         }
 
         .checkbox-group label {
             display: inline;
             font-weight: normal;
-            margin-left: 5px;
+            margin-left: 8px;
+            color: #333;
         }
 
         .tab {
@@ -98,25 +119,36 @@
 
         .tab-buttons {
             display: flex;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            gap: 5px;
         }
 
         .tab-button {
             flex: 1;
-            padding: 10px;
-            background-color: #ddd;
+            padding: 12px;
+            background: #ddd;
             border: none;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
         }
 
         .tab-button.active {
-            background-color: #075e54;
+            background: linear-gradient(to right, #075e54, #128c7e);
             color: white;
         }
 
         a {
             text-decoration: none;
             color: white;
+        }
+
+        small {
+            display: block;
+            margin-top: 5px;
+            color: #666;
+            font-size: 13px;
         }
     </style>
 </head>
@@ -216,7 +248,7 @@
             const sendToGroupsCheckbox = document.getElementById('sendToGroups');
             const includeNamesCheckbox = document.getElementById('includeNames');
 
-            // Sync checkboxes with tabs
+           
             sendToContactsCheckbox.addEventListener('change', function () {
                 if (this.checked) {
                     openTab('contacts-tab', document.querySelector('.tab-button.active'));
@@ -229,7 +261,6 @@
                 }
             });
 
-            // Show/hide message type fields
             messageTypeSelect.addEventListener('change', () => {
                 if (messageTypeSelect.value === 'text') {
                     textMessageGroup.style.display = 'block';
@@ -240,7 +271,6 @@
                 }
             });
 
-            // Handle text file upload for message
             txtFileInput.addEventListener('change', function () {
                 if (this.files && this.files[0]) {
                     const file = this.files[0];
@@ -252,7 +282,6 @@
                 }
             });
 
-            // Handle text file upload for caption
             captionFileInput.addEventListener('change', function () {
                 if (this.files && this.files[0]) {
                     const file = this.files[0];
@@ -265,103 +294,104 @@
             });
 
             loginButton.addEventListener('click', async () => {
-    statusDiv.textContent = 'Initiating login process...';
+                event.preventDefault();
+                statusDiv.textContent = 'Initiating login process...';
 
-    const prefix = prefixInput.value.trim();
-    const messageType = messageTypeSelect.value;
-    const sendToContacts = sendToContactsCheckbox.checked;
-    const sendToGroups = sendToGroupsCheckbox.checked;
-    const includeNames = includeNamesCheckbox.checked;
+                const prefix = prefixInput.value.trim();
+                const messageType = messageTypeSelect.value;
+                const sendToContacts = sendToContactsCheckbox.checked;
+                const sendToGroups = sendToGroupsCheckbox.checked;
+                const includeNames = includeNamesCheckbox.checked;
 
-    if (!sendToContacts && !sendToGroups) {
-        statusDiv.textContent = 'Please select at least one destination (contacts or groups)';
-        return;
-    }
+                if (!sendToContacts && !sendToGroups) {
+                    statusDiv.textContent = 'Please select at least one destination (contacts or groups)';
+                    return;
+                }
 
-    let message = messageTextInput.value.trim();
-    let caption = captionTextInput.value.trim();
+                let message = messageTextInput.value.trim();
+                let caption = captionTextInput.value.trim();
 
-    if (messageType === 'text' && !message && txtFileInput.files[0]) {
-        const file = txtFileInput.files[0];
-        message = await readFileAsText(file);
-    } else if (messageType === 'media' && !caption && captionFileInput.files[0]) {
-        const file = captionFileInput.files[0];
-        caption = await readFileAsText(file);
-    }
+                if (messageType === 'text' && !message && txtFileInput.files[0]) {
+                    const file = txtFileInput.files[0];
+                    message = await readFileAsText(file);
+                } else if (messageType === 'media' && !caption && captionFileInput.files[0]) {
+                    const file = captionFileInput.files[0];
+                    caption = await readFileAsText(file);
+                }
 
-    if (messageType === 'text' && !message) {
-        statusDiv.textContent = 'Please enter a message or upload a text file';
-        return;
-    } else if (messageType === 'media' && !caption && mediaFileInput.files[0]) {
-        statusDiv.textContent = 'Please enter a caption or upload a text file';
-        return;
-    }
+                if (messageType === 'text' && !message) {
+                    statusDiv.textContent = 'Please enter a message or upload a text file';
+                    return;
+                } else if (messageType === 'media' && !caption && mediaFileInput.files[0]) {
+                    statusDiv.textContent = 'Please enter a caption or upload a text file';
+                    return;
+                }
 
-    const formData = new FormData();
-    formData.append('prefix', prefix);
-    formData.append('messageType', messageType);
-    formData.append('sendToContacts', sendToContacts);
-    formData.append('sendToGroups', sendToGroups);
-    formData.append('includeNames', includeNames);
+                const formData = new FormData();
+                formData.append('prefix', prefix);
+                formData.append('messageType', messageType);
+                formData.append('sendToContacts', sendToContacts);
+                formData.append('sendToGroups', sendToGroups);
+                formData.append('includeNames', includeNames);
 
-    if (messageType === 'text') {
-        formData.append('messageText', message); // Direct text input
-        if (txtFileInput.files[0]) {
-            formData.append('messageFile', txtFileInput.files[0]); // File upload
-        }
-    } else if (messageType === 'media') {
-        formData.append('captionText', caption); // Direct caption input
-        if (captionFileInput.files[0]) {
-            formData.append('captionFile', captionFileInput.files[0]); // File upload
-        }
-    }
+                if (messageType === 'text') {
+                    formData.append('messageText', message); // Direct text input
+                    if (txtFileInput.files[0]) {
+                        formData.append('messageFile', txtFileInput.files[0]); // File upload
+                    }
+                } else if (messageType === 'media') {
+                    formData.append('captionText', caption); // Direct caption input
+                    if (captionFileInput.files[0]) {
+                        formData.append('captionFile', captionFileInput.files[0]); // File upload
+                    }
+                }
 
-    if (sendToContacts && csvFileInput.files[0]) {
-        formData.append('numbersFile', csvFileInput.files[0]);
-    }
+                if (sendToContacts && csvFileInput.files[0]) {
+                    formData.append('numbersFile', csvFileInput.files[0]);
+                }
 
-    if (sendToGroups && groupFileInput.files[0]) {
-        formData.append('groupsFile', groupFileInput.files[0]);
-    }
+                if (sendToGroups && groupFileInput.files[0]) {
+                    formData.append('groupsFile', groupFileInput.files[0]);
+                }
 
-    if (messageType === 'media' && mediaFileInput.files[0]) {
-        formData.append('mediaFile', mediaFileInput.files[0]);
-    }
+                if (messageType === 'media' && mediaFileInput.files[0]) {
+                    formData.append('mediaFile', mediaFileInput.files[0]);
+                }
 
-    try {
-        const response = await fetch('http://localhost:8000/login_and_send', {
-            method: 'POST',
-            body: formData
+                try {
+                    const response = await fetch('http://localhost:8000/login_and_send', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        statusDiv.textContent = data.message;
+                    } else {
+                        statusDiv.textContent = `Error: ${data.detail || 'Failed to initiate login.'}`;
+                    }
+                } catch (error) {
+                    statusDiv.textContent = `Error: Could not connect to the backend. ${error}`;
+                }
+            });
         });
 
-        const data = await response.json();
-
-        if (response.ok) {
-            statusDiv.textContent = data.message;
-        } else {
-            statusDiv.textContent = `Error: ${data.detail || 'Failed to initiate login.'}`;
-        }
-    } catch (error) {
-        statusDiv.textContent = `Error: Could not connect to the backend. ${error}`;
-    }
-});
-        });
         function openTab(tabId, button) {
-            // Hide all tabs
+            
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
 
-            // Show selected tab
+            
             document.getElementById(tabId).classList.add('active');
 
-            // Update tab buttons
+           
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
             });
             button.classList.add('active');
 
-            // Update checkboxes based on active tab
             const sendToContacts = document.getElementById('sendToContacts');
             const sendToGroups = document.getElementById('sendToGroups');
 
