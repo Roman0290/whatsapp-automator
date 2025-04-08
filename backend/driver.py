@@ -139,7 +139,7 @@ class Bot:
                     if not message_box:
                         raise Exception("Could not find message input box")
 
-                   
+                
                     try:
                         message_box.clear()
                         message_box.send_keys(message)

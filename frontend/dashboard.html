@@ -31,10 +31,13 @@
             border-radius: 12px;
             font-size: 12px;
             font-weight: bold;
+            color: white;
         }
-        .read { background: #25D366; color: white; }
-        .delivered { background: #34B7F1; color: white; }
-        .failed { background: #FF3B30; color: white; }
+        .read { background: #25D366; }
+        .delivered { background: #34B7F1; }
+        .sent { background: #FFC107; color: black; }
+        .failed { background: #FF3B30; }
+        .unknown { background: #9E9E9E; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -86,7 +89,7 @@
     </style>
 </head>
 <body>
-    <h1>WhatsApp Message statics </h1>
+    <h1>WhatsApp Message Analytics</h1>
     
     <div class="search-bar">
         <input type="text" id="searchContact" placeholder="Search contact or message...">
@@ -176,91 +179,111 @@
         }
         
         function updateSummaryChart(summary) {
-            const ctx = document.getElementById('summaryChart').getContext('2d');
-            
-            
-            if (summaryChart) {
-                summaryChart.destroy();
-            }
-            
-            summaryChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Read', 'Delivered', 'Failed'],
-                    datasets: [{
-                        data: [
-                            summary.read || 0, 
-                            summary.delivered || 0, 
-                            summary.failed || 0
-                        ],
-                        backgroundColor: [
-                            '#25D366',
-                            '#34B7F1',
-                            '#FF3B30'
-                        ],
-                        borderWidth: 1
-                    }]
+    const ctx = document.getElementById('summaryChart').getContext('2d');
+    
+    if (summaryChart) {
+        summaryChart.destroy();
+    }
+    
+    
+    const labels = ['Read', 'Delivered', 'Sent', 'Failed'];
+    const backgroundColors = ['#25D366', '#34B7F1', '#FFC107', '#FF3B30'];
+    
+  
+    const data = [
+        summary.read || 0,
+        summary.delivered || 0,
+        summary.sent || 0,
+        summary.failed || 0
+    ];
+    
+    summaryChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: backgroundColors,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                            return `${label}: ${value} (${percentage}%)`;
                         }
                     }
                 }
-            });
-        }
-        
-        function updateMessagesTable(messages) {
-            const tbody = document.getElementById('messagesBody');
-            tbody.innerHTML = '';
-            
-            const searchTerm = document.getElementById('searchContact').value.toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            
-            
-            const filteredMessages = messages.filter(msg => {
-                const contactMatches = msg.contact?.toLowerCase().includes(searchTerm) || false;
-                const messageMatches = msg.message?.toLowerCase().includes(searchTerm) || false;
-                const statusMatches = statusFilter === 'all' || msg.status === statusFilter;
-                return (contactMatches || messageMatches) && statusMatches;
-            });
-            
-          
-            if (filteredMessages.length === 0) {
-                const row = document.createElement('tr');
-                row.innerHTML = `<td colspan="4" style="text-align: center;">No messages found matching your criteria</td>`;
-                tbody.appendChild(row);
-            } else {
-                filteredMessages.forEach(msg => {
-                    const row = document.createElement('tr');
-                    const messagePreview = msg.message ? 
-                        `${msg.message.substring(0, 30)}${msg.message.length > 30 ? '...' : ''}` : 
-                        'No message content';
-                    
-                    row.innerHTML = `
-                        <td>${msg.contact || 'Unknown'}</td>
-                        <td title="${msg.message || ''}">${messagePreview}</td>
-                        <td><span class="status-badge ${msg.status}">${msg.status || 'unknown'}</span></td>
-                        <td>${formatTimestamp(msg.timestamp)}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
             }
         }
+    });
+}
+
+function updateMessagesTable(messages) {
+    const tbody = document.getElementById('messagesBody');
+    tbody.innerHTML = '';
+    
+    const searchTerm = document.getElementById('searchContact').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    
+    const statusOrder = ['read', 'delivered', 'sent', 'failed'];
+    const statusColors = {
+        'read': '#25D366',
+        'delivered': '#34B7F1',
+        'sent': '#FFC107',
+        'failed': '#FF3B30'
+    };
+    
+    const filteredMessages = messages.filter(msg => {
+        const messageText = msg.message ? String(msg.message).toLowerCase() : '';
+        const contactName = msg.contact ? String(msg.contact).toLowerCase() : '';
+        const status = msg.status ? String(msg.status).toLowerCase() : 'unknown';
         
+        return (contactName.includes(searchTerm) || 
+               messageText.includes(searchTerm)) &&
+               (statusFilter === 'all' || status === statusFilter);
+    });
+    
+    if (filteredMessages.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="4" style="text-align: center;">No messages found</td>`;
+        tbody.appendChild(row);
+    } else {
+        filteredMessages.forEach(msg => {
+            const row = document.createElement('tr');
+            const messageText = msg.message || '';
+            const messagePreview = messageText.length > 30 
+                ? `${messageText.substring(0, 30)}...` 
+                : messageText;
+            
+            const status = msg.status ? String(msg.status).toLowerCase() : 'unknown';
+            const statusColor = statusColors[status] || '#9E9E9E';
+            
+            row.innerHTML = `
+                <td>${msg.contact || 'Unknown'}</td>
+                <td title="${messageText}">${messagePreview}</td>
+                <td>
+                    <span class="status-badge" style="background-color: ${statusColor}">
+                        ${status}
+                    </span>
+                </td>
+                <td>${formatTimestamp(msg.timestamp)}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+}
         function formatTimestamp(timestamp) {
             if (!timestamp) return 'Unknown';
             try {

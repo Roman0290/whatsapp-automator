@@ -1,3 +1,4 @@
+import random
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +9,7 @@ from datetime import datetime
 import json
 import time
 import logging
-from typing import Optional
+from typing import List, Optional
 from driver import Bot
 
 app = FastAPI(title="WhatsApp Automation API", version="1.0.0")
@@ -362,23 +363,7 @@ async def serve_dashboard():
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Dashboard not found")
     
-from fastapi import FastAPI, Form, HTTPException
-from typing import List
-from driver import Bot  # Assuming your Bot class is in 'driver.py'
-import json
-import time
-import random
 
-app = FastAPI()
-
-from fastapi import FastAPI, Form, HTTPException
-from typing import List
-from driver import Bot  # Assuming your Bot class is in 'driver.py'
-import json
-import time
-import random
-
-app = FastAPI()
 
 @app.post("/api/send-whatsapp")
 async def send_whatsapp_messages(
